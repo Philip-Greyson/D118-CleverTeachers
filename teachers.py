@@ -28,15 +28,41 @@ with oracledb.connect(user=un, password=pw, dsn=cs) as con:
         with open('teacher_log.txt', 'w') as log:
             with open('Teachers.csv', 'w') as output:  # open the output file
                 print("Connection established: " + con.version)
-                print('"Teacher_id","Teacher_number","State_teacher_id","School_id","First_name","Middle_name","Last_name","Teacher_email","Active","Title","Username"',file=output)  # print out header row
-                print('"Teacher_id","Teacher_number","State_teacher_id","School_id","First_name","Middle_name","Last_name","Teacher_email","Active","Title","Username"',file=log)
+                print('"OLD_TEACHER_ID","Teacher_id","Teacher_number","State_teacher_id","School_id","First_name","Middle_name","Last_name","Teacher_email","Title","Username"',file=output)  # print out header row
+                print('"OLD_TEACHER_ID","Teacher_id","Teacher_number","State_teacher_id","School_id","First_name","Middle_name","Last_name","Teacher_email","Title","Username"',file=log)
                 # get the overall user info (non-school specific) for all users in the current school, filtering to only those who have an email filled in to avoid "fake" accounts like test/temp staff
                 cur.execute('SELECT dcid, teachernumber, SIF_StatePrid, homeschoolid, first_name, middle_name, last_name, email_addr, title, teacherloginid FROM users WHERE email_addr IS NOT NULL ORDER BY dcid')
                 users = cur.fetchall()
                 for user in users:
                     try:
                         print(user)
-                        print(user, file=log)
+                        # print(user, file=log)
+                        enabled = False # set their enabled flag to be false by default, will be set to true later if they have an active school
+                        # store the info in variables for better readability so its obvious what we pass later on
+                        uDCID = str(user[0]) # get the unique DCID for that user
+                        teacherNum = str(user[1])
+                        stateID = str(user[2]) if user[2] else '' # get their state teacher number if it exists, or just a blank string if not
+                        homeschool = str(user[3])
+                        firstName = str(user[4])
+                        middleName = str(user[5]) if user[5] else ''
+                        lastName = str(user[6])
+                        email = str(user[7]).lower() # convert email in PS to lowercase to ignore any capital letters in it
+                        title = str(user[8]) if user[8] else ''
+                        loginID = str(user[9]) if user[9] else ''
+                        staffID = '' # reset staffID to blank each time, will be populated below if relevant
+                        # next do a query for their schoolstaff entries that are active, they have one per building they have teacher access in with different info
+                        cur.execute('SELECT id, status FROM schoolstaff WHERE users_dcid = ' + uDCID + ' AND status=1')
+                        schoolStaff = cur.fetchall()
+                        if schoolStaff: # if we get results back from the query, the staff member has at least 1 active school
+                            if len(schoolStaff) == 1: # if there is only one school result, they previously were in clever but had a "bad" non-unique ID
+                                staffID = str(schoolStaff[0][0])
+                            print(f'"{staffID}","{uDCID}","{teacherNum}","{stateID}","{homeschool}","{firstName}","{middleName}","{lastName}","{email}","{title}","{loginID}"')
+                            print(f'"{staffID}","{uDCID}","{teacherNum}","{stateID}","{homeschool}","{firstName}","{middleName}","{lastName}","{email}","{title}","{loginID}"', file=log)
+                            print(f'"{staffID}","{uDCID}","{teacherNum}","{stateID}","{homeschool}","{firstName}","{middleName}","{lastName}","{email}","{title}","{loginID}"', file=output)
+                        else: # if they have no active buildings, they should not be included in output file
+                            print(f'INFO: {email} has no active buildings, skipping')
+                            print(f'INFO: {email} has no active buildings, skipping',file=log)
+
                     except Exception as er:
                         print(f'ERROR on {user[1]}: {er}')
                         print(f'ERROR on {user[1]}: {er}', file=log)
