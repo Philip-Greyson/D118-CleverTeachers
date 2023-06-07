@@ -28,8 +28,8 @@ with oracledb.connect(user=un, password=pw, dsn=cs) as con:
         with open('teacher_log.txt', 'w') as log:
             with open('Teachers.csv', 'w') as output:  # open the output file
                 print("Connection established: " + con.version)
-                print('"OLD_TEACHER_ID","Teacher_id","Teacher_number","State_teacher_id","School_id","First_name","Middle_name","Last_name","Teacher_email","Title","Username"',file=output)  # print out header row
-                print('"OLD_TEACHER_ID","Teacher_id","Teacher_number","State_teacher_id","School_id","First_name","Middle_name","Last_name","Teacher_email","Title","Username"',file=log)
+                print('"Teacher_id","Teacher_number","State_teacher_id","School_id","First_name","Middle_name","Last_name","Teacher_email","Title","Username"',file=output)  # print out header row
+                print('"Teacher_id","Teacher_number","State_teacher_id","School_id","First_name","Middle_name","Last_name","Teacher_email","Title","Username"',file=log)
                 # get the overall user info (non-school specific) for all users in the current school, filtering to only those who have an email filled in to avoid "fake" accounts like test/temp staff
                 cur.execute('SELECT dcid, teachernumber, SIF_StatePrid, homeschoolid, first_name, middle_name, last_name, email_addr, title, teacherloginid FROM users WHERE email_addr IS NOT NULL ORDER BY dcid')
                 users = cur.fetchall()
@@ -56,9 +56,9 @@ with oracledb.connect(user=un, password=pw, dsn=cs) as con:
                         if schoolStaff: # if we get results back from the query, the staff member has at least 1 active school
                             if len(schoolStaff) == 1: # if there is only one school result, they previously were in clever but had a "bad" non-unique ID
                                 staffID = str(schoolStaff[0][0])
-                            print(f'"{staffID}","{uDCID}","{teacherNum}","{stateID}","{homeschool}","{firstName}","{middleName}","{lastName}","{email}","{title}","{loginID}"')
-                            print(f'"{staffID}","{uDCID}","{teacherNum}","{stateID}","{homeschool}","{firstName}","{middleName}","{lastName}","{email}","{title}","{loginID}"', file=log)
-                            print(f'"{staffID}","{uDCID}","{teacherNum}","{stateID}","{homeschool}","{firstName}","{middleName}","{lastName}","{email}","{title}","{loginID}"', file=output)
+                            print(f'"{uDCID}","{teacherNum}","{stateID}","{homeschool}","{firstName}","{middleName}","{lastName}","{email}","{title}","{loginID}"')
+                            print(f'"{uDCID}","{teacherNum}","{stateID}","{homeschool}","{firstName}","{middleName}","{lastName}","{email}","{title}","{loginID}"', file=log)
+                            print(f'"{uDCID}","{teacherNum}","{stateID}","{homeschool}","{firstName}","{middleName}","{lastName}","{email}","{title}","{loginID}"', file=output)
                         else: # if they have no active buildings, they should not be included in output file
                             print(f'INFO: {email} has no active buildings, skipping')
                             print(f'INFO: {email} has no active buildings, skipping',file=log)
@@ -66,5 +66,15 @@ with oracledb.connect(user=un, password=pw, dsn=cs) as con:
                     except Exception as er:
                         print(f'ERROR on {user[1]}: {er}')
                         print(f'ERROR on {user[1]}: {er}', file=log)
+
+            # connect to the Clever SFTP server using the login details stored as environement variables
+            with pysftp.Connection(sftpHOST, username=sftpUN, password=sftpPW, cnopts=cnopts) as sftp:
+                print('SFTP connection established')
+                print('SFTP connection established', file=log)
+                # print(sftp.pwd) # debug, show what folder we connected to
+                # print(sftp.listdir())  # debug, show what other files/folders are in the current directory
+                sftp.put('Teachers.csv')  # upload the file onto the sftp server
+                print("Student sync file plraced on remote server")
+                print("Student sync file placed on remote server", file=log)
                 
                 
