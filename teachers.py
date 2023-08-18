@@ -31,7 +31,7 @@ with oracledb.connect(user=un, password=pw, dsn=cs) as con:
                 print('"Teacher_id","Teacher_number","State_teacher_id","School_id","First_name","Middle_name","Last_name","Teacher_email","Title","Username"',file=output)  # print out header row
                 print('"Teacher_id","Teacher_number","State_teacher_id","School_id","First_name","Middle_name","Last_name","Teacher_email","Title","Username"',file=log)
                 # get the overall user info (non-school specific) for all users in the current school, filtering to only those who have an email filled in to avoid "fake" accounts like test/temp staff
-                cur.execute('SELECT dcid, teachernumber, SIF_StatePrid, homeschoolid, first_name, middle_name, last_name, email_addr, title, teacherloginid FROM users WHERE email_addr IS NOT NULL ORDER BY dcid')
+                cur.execute('SELECT dcid, teachernumber, SIF_StatePrid, homeschoolid, first_name, middle_name, last_name, email_addr, title, teacherloginid FROM users WHERE email_addr IS NOT NULL AND homeschoolid <> 136 AND homeschoolid <> 2 ORDER BY dcid')
                 users = cur.fetchall()
                 for user in users:
                     try:
