@@ -4,7 +4,6 @@
 
 # importing module
 import pysftp  # used to connect to the Clever sftp site and upload the file
-import sys  # needed for  non-scrolling display
 import os  # needed to get system variables which have the PS IP and password in them
 import oracledb # needed to connect to the PowerSchool database (oracle database)
 from datetime import datetime
@@ -19,8 +18,10 @@ sftpPW = os.environ.get('CLEVER_SFTP_PASSWORD')
 sftpHOST = os.environ.get('CLEVER_SFTP_ADDRESS')
 cnopts = pysftp.CnOpts(knownhosts='known_hosts') #connection options to use the known_hosts file for key validation
 
-print("Username: " + str(un) + " |Password: " + str(pw) + " |Server: " + str(cs))
+print("PS Username: " + str(un) + " |PS Password: " + str(pw) + " |PS Server: " + str(cs))
 print("SFTP Username: " + str(sftpUN) + " |SFTP Password: " + str(sftpPW) + " |SFTP Server: " + str(sftpHOST)) #debug so we can see what sftp info is being used
+
+IGNORED_NAMES = ['ADMIN', 'TECH', 'PLUGIN', 'SUB', 'TEST', 'TEACHER']
 
 # create the connecton to the database
 with oracledb.connect(user=un, password=pw, dsn=cs) as con:
@@ -31,7 +32,7 @@ with oracledb.connect(user=un, password=pw, dsn=cs) as con:
                 print('"Teacher_id","Teacher_number","State_teacher_id","School_id","First_name","Middle_name","Last_name","Teacher_email","Title","Username"',file=output)  # print out header row
                 print('"Teacher_id","Teacher_number","State_teacher_id","School_id","First_name","Middle_name","Last_name","Teacher_email","Title","Username"',file=log)
                 # get the overall user info (non-school specific) for all users in the current school, filtering to only those who have an email filled in to avoid "fake" accounts like test/temp staff
-                cur.execute('SELECT dcid, teachernumber, SIF_StatePrid, homeschoolid, first_name, middle_name, last_name, email_addr, title, teacherloginid FROM users WHERE email_addr IS NOT NULL AND homeschoolid <> 136 AND homeschoolid <> 2 ORDER BY dcid')
+                cur.execute('SELECT dcid, teachernumber, SIF_StatePrid, homeschoolid, first_name, middle_name, last_name, email_addr, title, teacherloginid FROM users WHERE email_addr IS NOT NULL AND homeschoolid <> 136 AND homeschoolid <> 2 AND homeschoolid <> 0 ORDER BY dcid')
                 users = cur.fetchall()
                 for user in users:
                     try:
@@ -50,6 +51,10 @@ with oracledb.connect(user=un, password=pw, dsn=cs) as con:
                         title = str(user[8]) if user[8] else ''
                         loginID = str(user[9]) if user[9] else ''
                         staffID = '' # reset staffID to blank each time, will be populated below if relevant
+                        if firstName.upper() in IGNORED_NAMES or lastName.upper() in IGNORED_NAMES:  # check if their first or last names match one of our ignored terms
+                            print(f'WARN: Found user {firstName} {lastName} - {email} that has a name in the ignored list, they will be skipped')
+                            print(f'WARN: Found user {firstName} {lastName} - {email} that has a name in the ignored list, they will be skipped', file=log)
+                            continue  # skip to the next iteration of the loop, aka the next user
                         # next do a query for their schoolstaff entries that are active, they have one per building they have teacher access in with different info
                         cur.execute('SELECT id, status FROM schoolstaff WHERE users_dcid = ' + uDCID + ' AND status=1')
                         schoolStaff = cur.fetchall()
@@ -73,7 +78,7 @@ with oracledb.connect(user=un, password=pw, dsn=cs) as con:
                 print('SFTP connection established', file=log)
                 # print(sftp.pwd) # debug, show what folder we connected to
                 # print(sftp.listdir())  # debug, show what other files/folders are in the current directory
-                sftp.put('Teachers.csv')  # upload the file onto the sftp server
+                # sftp.put('Teachers.csv')  # upload the file onto the sftp server
                 print("Student sync file plraced on remote server")
                 print("Student sync file placed on remote server", file=log)
                 
