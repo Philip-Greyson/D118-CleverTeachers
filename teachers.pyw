@@ -78,7 +78,7 @@ with oracledb.connect(user=un, password=pw, dsn=cs) as con:
                 print('SFTP connection established', file=log)
                 # print(sftp.pwd) # debug, show what folder we connected to
                 # print(sftp.listdir())  # debug, show what other files/folders are in the current directory
-                # sftp.put('Teachers.csv')  # upload the file onto the sftp server
+                sftp.put('Teachers.csv')  # upload the file onto the sftp server
                 print("Student sync file plraced on remote server")
                 print("Student sync file placed on remote server", file=log)
                 
